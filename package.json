@@ -1,0 +1,15 @@
+{
+  "name": "casa-crm-backend",
+  "version": "1.0.0",
+  "description": "Backend CRM Casa Desenvolvimento Imobiliário",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node index.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "@supabase/supabase-js": "^2.39.0"
+  }
+}

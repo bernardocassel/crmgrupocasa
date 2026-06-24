@@ -136,7 +136,7 @@ async function processarLead({ phone, name, text }) {
       phone:      formatarTelefone(phone),
       phone_raw:  phone,
       interest:   detectarInteresse(text),
-      emp:        'Maré Empreendimentos',
+      emp:        'Indefinido',
       stage:      'novo',
       raw_value:  0,
       history:    [{ date: nowStr(), text: `📱 Primeiro contato via WhatsApp: "${text.slice(0, 200)}"` }],

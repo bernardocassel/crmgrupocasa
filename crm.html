@@ -633,7 +633,7 @@ function renderLeads(){
       `;
       el.addEventListener('dragstart',e=>{dragId=l.id;dragMoved=false;el.classList.add('dragging');e.dataTransfer.effectAllowed='move';});
       el.addEventListener('dragend',()=>el.classList.remove('dragging'));
-      el.addEventListener('click',()=>{if(!dragMoved)openFollowModal(l.id);dragMoved=false;});
+      el.addEventListener('click',()=>{if(!dragMoved){if(l.stage==='novo')openEditLead(l.id);else openFollowModal(l.id);}dragMoved=false;});
       // client can't edit
       if(SESSION&&SESSION.role==='client') el.style.cursor='default';
       body.appendChild(el);

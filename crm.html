@@ -625,15 +625,15 @@ function renderLeads(){
       el.innerHTML=`
         <div class="card-name">${esc(l.name)}</div>
         ${l.phone?`<div class="card-row"><i class="ti ti-phone"></i>${esc(l.phone)}</div>`:''}
-        ${l.interest?`<span class="card-tag" style="background:${SBG[l.stage]||'#eee'};color:${STX[l.stage]||'#333'}">${esc(l.interest)}</span>`:''}
-        ${showEmp?`<span class="card-emp">${esc(l.emp)}</span>`:''}
+        ${l.interest&&l.interest!=='Outro'?`<span class="card-tag" style="background:${SBG[l.stage]||'#eee'};color:${STX[l.stage]||'#333'}">${esc(l.interest)}</span>`:''}
+        ${showEmp&&l.emp&&l.emp!=='Indefinido'?`<span class="card-emp">${esc(l.emp)}</span>`:''}
         ${(l.rawValue||l.raw_value)?`<div class="card-row"><i class="ti ti-currency-dollar"></i>${fmtBRL(l.rawValue||l.raw_value)}</div>`:''}
         ${l.history&&l.history.length?`<div class="card-desc">${esc(l.history[l.history.length-1].text.slice(0,55))}${l.history[l.history.length-1].text.length>55?'…':''}</div>`:''}
         ${nextTask?`<div class="card-task"><i class="ti ti-arrow-right"></i>${esc(nextTask.title.slice(0,38))}${nextTask.date?' · '+fmtDate(nextTask.date):''}</div>`:''}
       `;
       el.addEventListener('dragstart',e=>{dragId=l.id;dragMoved=false;el.classList.add('dragging');e.dataTransfer.effectAllowed='move';});
       el.addEventListener('dragend',()=>el.classList.remove('dragging'));
-      el.addEventListener('click',()=>{if(!dragMoved)openEditLead(l.id);dragMoved=false;});
+      el.addEventListener('click',()=>{if(!dragMoved)openFollowModal(l.id);dragMoved=false;});
       // client can't edit
       if(SESSION&&SESSION.role==='client') el.style.cursor='default';
       body.appendChild(el);
@@ -920,10 +920,142 @@ document.getElementById('leadOverlay').addEventListener('click',e=>{if(e.target.
 document.getElementById('taskOverlay').addEventListener('click',e=>{if(e.target.id==='taskOverlay')closeTaskModal();});
 document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.id==='loginPass')doLogin();});
 
+
+// ══════════════════════════════════════════════════════════
+// FOLLOW-UP MODAL (acompanhamento de lead existente)
+// ══════════════════════════════════════════════════════════
+let followLeadId = null;
+
+function openFollowModal(id){
+  const l = leads.find(x=>x.id===id); if(!l) return;
+  followLeadId = id;
+
+  document.getElementById('followName').textContent = l.name;
+  document.getElementById('followPhone').innerHTML = `<i class="ti ti-phone"></i> ${esc(l.phone||'')}`;
+  document.getElementById('followNote').value = '';
+  document.getElementById('followNextStep').value = '';
+  document.getElementById('followNextDate').value = '';
+
+  // Stage select
+  const stSel = document.getElementById('followStage');
+  stSel.innerHTML = STAGES.map(s=>`<option value="${s.key}"${l.stage===s.key?' selected':''}>${s.label}</option>`).join('');
+
+  // Emp select
+  document.getElementById('followEmp').value = l.emp || 'Indefinido';
+
+  // History
+  const hist = l.history || [];
+  const histEl = document.getElementById('followHistList');
+  if(hist.length){
+    histEl.innerHTML = [...hist].reverse().map(h=>`
+      <div class="hbox"><div class="hd">${esc(h.date)}</div><div class="ht">${esc(h.text)}</div></div>
+    `).join('');
+  } else {
+    histEl.innerHTML = '<div style="font-size:12px;color:var(--muted);padding:8px 0">Nenhuma anotação ainda.</div>';
+  }
+
+  document.getElementById('followOverlay').classList.remove('hidden');
+  document.getElementById('followNote').focus();
+}
+
+function closeFollowModal(){
+  document.getElementById('followOverlay').classList.add('hidden');
+  followLeadId = null;
+}
+
+async function saveFollowModal(){
+  const l = leads.find(x=>x.id===followLeadId); if(!l) return;
+  const note     = document.getElementById('followNote').value.trim();
+  const nextStep = document.getElementById('followNextStep').value.trim();
+  const nextDate = document.getElementById('followNextDate').value;
+  const newStage = document.getElementById('followStage').value;
+  const newEmp   = document.getElementById('followEmp').value;
+
+  const updates = { stage: newStage, emp: newEmp };
+
+  if(note){
+    l.history = l.history || [];
+    l.history.push({ date: nowStr(), text: note });
+    updates.history = l.history;
+  }
+
+  Object.assign(l, updates);
+  await apiPatch('/leads/'+followLeadId, updates);
+
+  if(nextStep){
+    const task = {id:uid(), title:nextStep, lead_id:followLeadId, date:nextDate||'', time:'', stage:'pendente', notes:''};
+    const saved = await apiPost('/tasks', task);
+    tasks.push(saved||task);
+  }
+
+  closeFollowModal();
+  renderAll();
+}
+
+async function deleteFollowLead(){
+  const l = leads.find(x=>x.id===followLeadId);
+  if(l){
+    await apiDelete('/leads/'+followLeadId);
+    leads = leads.filter(x=>x.id!==followLeadId);
+    closeFollowModal();
+    renderLeads(); renderDash(); renderTrash();
+  }
+}
+
+document.getElementById('followOverlay').addEventListener('click', e=>{
+  if(e.target.id==='followOverlay') closeFollowModal();
+});
+
+
 // ══════════════════════════════════════════════════════════
 // INIT
 // ══════════════════════════════════════════════════════════
 loadAll();
 </script>
+
+<!-- FOLLOW-UP MODAL (card already registered) -->
+<div class="overlay hidden" id="followOverlay">
+  <div class="modal" style="width:460px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <h2 id="followName" style="margin:0"></h2>
+      <div style="display:flex;gap:8px;align-items:center">
+        <select id="followStage" style="padding:6px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit"></select>
+        <select id="followEmp" style="padding:6px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit">
+          <option value="Indefinido">Indefinido</option>
+          <option value="Maré Empreendimentos">Maré Empreendimentos</option>
+          <option value="Outro">Outro</option>
+        </select>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:12px;font-size:12px;color:var(--muted)">
+      <span id="followPhone"><i class="ti ti-phone"></i> </span>
+    </div>
+
+    <!-- Histórico -->
+    <div style="font-size:11px;color:var(--muted);margin-bottom:5px;font-weight:500">HISTÓRICO</div>
+    <div class="hist-list" id="followHistList" style="max-height:200px;overflow-y:auto;margin-bottom:12px"></div>
+
+    <!-- Nova anotação -->
+    <div class="field">
+      <label>Nova anotação</label>
+      <textarea id="followNote" placeholder="Ex: Cliente disse que vai passar no stand esta semana..." style="min-height:72px"></textarea>
+    </div>
+
+    <!-- Próximo passo -->
+    <div class="field">
+      <label>Próximo passo <span style="color:var(--muted);font-size:10px">(cria tarefa automaticamente)</span></label>
+      <input type="text" id="followNextStep" placeholder="Ex: Ligar na quinta às 10h...">
+      <input type="date" id="followNextDate" style="margin-top:5px">
+    </div>
+
+    <div class="modal-actions">
+      <div class="left">
+        <button class="btn btn-ghost" onclick="closeFollowModal()">Fechar</button>
+        <button class="btn-danger" onclick="deleteFollowLead()"><i class="ti ti-trash"></i> Excluir</button>
+      </div>
+      <button class="btn btn-primary" onclick="saveFollowModal()">Salvar</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>

@@ -293,68 +293,46 @@ app.post('/importar-whatsapp', async (req, res) => {
   if (!waSocket || !waConnected) {
     return res.status(400).json({ error: 'WhatsApp não conectado. Acesse /qrcode primeiro.' });
   }
-
   try {
     console.log('📥 Iniciando importação de conversas...');
-    const chats = await waSocket.groupFetchAllParticipating(); // só para testar conexão
-  } catch(e) {}
+    const limite30dias = Date.now() - (30 * 24 * 60 * 60 * 1000);
+    let importados = 0, ignorados = 0, erros = 0;
 
-  // Busca todos os chats
-  let chats = [];
-  try {
-    chats = await waSocket.fetchChats?.() || waSocket.chats?.all?.() || [];
-  } catch(e) {
-    console.log('fetchChats não disponível, usando store...');
-  }
+    // Acessa chats do store interno do Baileys
+    const chatMap = waSocket.store?.chats || waSocket.chats || {};
+    const chatList = typeof chatMap.all === 'function' ? chatMap.all() : Object.values(chatMap);
 
-  // Filtra últimos 30 dias e só conversas individuais (não grupos)
-  const limite30dias = Date.now() - (30 * 24 * 60 * 60 * 1000);
-  let importados = 0;
-  let ignorados  = 0;
-  let erros      = 0;
+    for(const chat of chatList){
+      const jid = chat.id || chat.jid || '';
+      if(!jid || jid.includes('@g.us') || jid.includes('@broadcast') || jid.includes('@newsletter')) continue;
 
-  // Busca contatos/chats do store interno do Baileys
-  const store = waSocket.store || {};
-  const contacts = Object.entries(store.contacts || {});
-
-  if(contacts.length === 0){
-    // Tenta via chats
-    const chatList = Object.entries(store.chats || {});
-    for(const [jid, chat] of chatList){
-      if(jid.includes('@g.us')) continue; // ignora grupos
-      if(jid.includes('@broadcast')) continue;
       const ts = (chat.conversationTimestamp || chat.t || 0) * 1000;
-      if(ts < limite30dias && ts > 0) continue;
+      if(ts > 0 && ts < limite30dias) continue;
 
-      const phone = jid.replace('@s.whatsapp.net','');
-      const name  = chat.name || chat.notify || phone;
+      const phone = jid.replace('@s.whatsapp.net','').replace('@c.us','');
+      if(!phone || phone.length < 8) continue;
+      const name = chat.name || chat.pushName || chat.notify || phone;
 
       try {
         const { data: existing } = await supabase.from('leads').select('id').eq('phone_raw', phone).limit(1);
         if(existing && existing.length > 0){ ignorados++; continue; }
-
         await supabase.from('leads').insert([{
-          id:         uid(),
-          name:       name,
-          phone:      formatarTelefone(phone),
-          phone_raw:  phone,
-          interest:   '',
-          emp:        'Indefinido',
-          stage:      'novo',
-          raw_value:  0,
-          history:    [{ date: nowStr(), text: '📥 Importado do histórico do WhatsApp' }],
-          deleted:    false,
-          source:     'WhatsApp (importado)',
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
+          id: uid(), name, phone: formatarTelefone(phone), phone_raw: phone,
+          interest: '', emp: 'Indefinido', stage: 'novo', raw_value: 0,
+          history: [{ date: nowStr(), text: '📥 Importado do histórico do WhatsApp' }],
+          deleted: false, source: 'WhatsApp (importado)',
+          created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
         }]);
         importados++;
       } catch(e){ erros++; console.error('Erro ao importar', phone, e.message); }
     }
-  }
 
-  console.log(`✅ Importação: ${importados} novos, ${ignorados} já existiam, ${erros} erros`);
-  res.json({ ok: true, importados, ignorados, erros });
+    console.log(`✅ Importação: ${importados} novos, ${ignorados} já existiam, ${erros} erros`);
+    res.json({ ok: true, importados, ignorados, erros });
+  } catch(err) {
+    console.error('Erro na importação:', err.message);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // ── SERVE CRM ────────────────────────────────────────────

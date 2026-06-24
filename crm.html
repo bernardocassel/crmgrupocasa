@@ -921,6 +921,30 @@ document.getElementById('taskOverlay').addEventListener('click',e=>{if(e.target.
 document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.id==='loginPass')doLogin();});
 
 
+
+async function importarWhatsApp(){
+  const btn = document.getElementById('importBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="ti ti-loader"></i> Importando...';
+  try {
+    const r = await fetch('/importar-whatsapp', {method:'POST'});
+    const data = await r.json();
+    if(data.error){
+      alert('Erro: ' + data.error);
+    } else {
+      alert(`✅ Importação concluída!\n\n• ${data.importados} leads novos importados\n• ${data.ignorados} já existiam no CRM\n• ${data.erros} erros`);
+      await loadAll();
+      renderLeads();
+      renderDash();
+    }
+  } catch(e){
+    alert('Erro ao importar: ' + e.message);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="ti ti-brand-whatsapp"></i> Importar WA';
+  }
+}
+
 // ══════════════════════════════════════════════════════════
 // FOLLOW-UP MODAL (acompanhamento de lead existente)
 // ══════════════════════════════════════════════════════════

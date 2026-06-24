@@ -248,6 +248,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--sand);color:var(--ink);mi
     <select id="empFilter" onchange="applyFilter()">
       <option value="all">Todos</option>
       <option value="Maré Empreendimentos">Maré Empreendimentos</option>
+      <option value="Indefinido">Indefinido (sem empreendimento)</option>
     </select>
     <div class="filter-info" id="filterInfo"></div>
     <div class="logout-btn" onclick="doLogout()"><i class="ti ti-logout"></i> <span id="userLabel"></span></div>
@@ -351,6 +352,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--sand);color:var(--ink);mi
     <div class="field"><label>Telefone</label><input type="text" id="fPhone" placeholder="(51) 99999-9999"></div>
     <div class="field" id="empFieldWrap"><label>Empreendimento</label>
       <select id="fEmp">
+        <option value="Indefinido">Indefinido (atribuir depois)</option>
         <option value="Maré Empreendimentos">Maré Empreendimentos</option>
         <option value="Outro">Outro</option>
       </select>
@@ -660,7 +662,7 @@ function openNewLead(){
   ['fName','fPhone','fValue','fNextStep','fNextDate','fNewNote'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('fInterest').value='';
   document.getElementById('fStage').value='novo';
-  document.getElementById('fEmp').value=activeFilter!=='all'?activeFilter:'Maré Empreendimentos';
+  document.getElementById('fEmp').value=activeFilter!=='all'&&activeFilter!=='Indefinido'?activeFilter:'Indefinido';
   document.getElementById('leadDeleteBtn').style.display='none';
   document.getElementById('histSection').style.display='none';
   document.getElementById('leadOverlay').classList.remove('hidden');
@@ -674,7 +676,7 @@ function openEditLead(id){
   document.getElementById('fName').value=l.name||'';
   document.getElementById('fPhone').value=l.phone||'';
   document.getElementById('fInterest').value=l.interest||'';
-  document.getElementById('fEmp').value=l.emp||'Maré Empreendimentos';
+  document.getElementById('fEmp').value=l.emp||'Indefinido';
   document.getElementById('fValue').value=l.rawValue?'R$ '+l.rawValue.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}):'';
   document.getElementById('fStage').value=l.stage||'novo';
   document.getElementById('fNextStep').value='';

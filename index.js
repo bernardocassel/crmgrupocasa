@@ -225,6 +225,25 @@ app.post('/leads', async (req, res) => {
   res.json(data[0]);
 });
 
+// ── IMPORTAR LOTE DE LEADS ───────────────────────────────
+app.post('/leads/bulk', async (req, res) => {
+  const lista = req.body;
+  if (!Array.isArray(lista) || lista.length === 0) {
+    return res.status(400).json({ error: 'Envie um array de leads.' });
+  }
+  const hoje = new Date().toISOString();
+  const registros = lista.map(l => ({
+    ...l,
+    id:         uid(),
+    deleted:    false,
+    created_at: hoje,
+    updated_at: hoje,
+  }));
+  const { data, error } = await supabase.from('leads').insert(registros).select();
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ ok: true, inseridos: data.length });
+});
+
 app.patch('/leads/:id', async (req, res) => {
   const { data, error } = await supabase.from('leads').update({ ...req.body, updated_at: new Date().toISOString() }).eq('id', req.params.id).select();
   if (error) return res.status(500).json({ error: error.message });
@@ -280,11 +299,6 @@ function detectarInteresse(text) {
   if (t.includes('milano'))  return 'Milano';
   return 'Outro';
 }
-
-
-
-
-
 
 // ══════════════════════════════════════════════════════════
 // IMPORTAR CONVERSAS DOS ÚLTIMOS 30 DIAS DO WHATSAPP

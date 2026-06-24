@@ -286,7 +286,6 @@ function detectarInteresse(text) {
 
 
 // ── SERVE CRM ────────────────────────────────────────────
-const path = require('path');
 app.get('/app', (req, res) => {
   res.sendFile(path.join(__dirname, 'crm.html'));
 });

@@ -12,7 +12,12 @@ const path    = require('path');
 const pino    = require('pino');
 
 const app = express();
-app.use(cors());
+app.use(cors({
+  origin: '*',
+  methods: ['GET','POST','PATCH','DELETE','OPTIONS'],
+  allowedHeaders: ['Content-Type','Authorization']
+}));
+app.options('*', cors());
 app.use(express.json());
 
 const PORT         = process.env.PORT || 3000;
@@ -817,7 +822,7 @@ let leads=[],tasks=[],investments=[],goals={leads:0,visitas:0,vendas:0};
 let editLeadId=null,editTaskId=null,dragId=null,dragMoved=false,tDragId=null,tDragMoved=false;
 let calYear=new Date().getFullYear(),calMonth=new Date().getMonth();
 
-const API = 'https://crmgrupocasa.onrender.com';
+const API = '';
 
 // ── investments e goals ficam no localStorage (dados internos) ──
 function lsGet(k){ try{ const v=localStorage.getItem(k); return v?JSON.parse(v):null; }catch(e){ return null; } }

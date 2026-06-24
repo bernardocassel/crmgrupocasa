@@ -625,7 +625,7 @@ function renderLeads(){
         ${l.phone?`<div class="card-row"><i class="ti ti-phone"></i>${esc(l.phone)}</div>`:''}
         ${l.interest?`<span class="card-tag" style="background:${SBG[l.stage]||'#eee'};color:${STX[l.stage]||'#333'}">${esc(l.interest)}</span>`:''}
         ${showEmp?`<span class="card-emp">${esc(l.emp)}</span>`:''}
-        ${(l.rawValue||l.raw_value)?`<div class="card-row"><i class="ti ti-currency-dollar"></i>${fmtBRL(l.rawValue||l.raw_value)}</div>`:\'\'}
+        ${(l.rawValue||l.raw_value)?`<div class="card-row"><i class="ti ti-currency-dollar"></i>${fmtBRL(l.rawValue||l.raw_value)}</div>`:''}
         ${l.history&&l.history.length?`<div class="card-desc">${esc(l.history[l.history.length-1].text.slice(0,55))}${l.history[l.history.length-1].text.length>55?'…':''}</div>`:''}
         ${nextTask?`<div class="card-task"><i class="ti ti-arrow-right"></i>${esc(nextTask.title.slice(0,38))}${nextTask.date?' · '+fmtDate(nextTask.date):''}</div>`:''}
       `;
